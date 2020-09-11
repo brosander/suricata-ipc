@@ -152,7 +152,8 @@ impl<'a, M> Ids<'a, M> {
     }
 
     pub async fn new(args: Config) -> Result<Ids<'a, M>, Error>
-        where M: Send + 'static
+    where
+        M: Send + 'static,
     {
         //need a one shot server name to give to suricata
         let server = packet_ipc::Server::new().map_err(Error::from)?;
@@ -162,30 +163,33 @@ impl<'a, M> Ids<'a, M> {
 
         args.materialize(readers.iter())?;
 
-        let future_connections: Result<Vec<_>, Error> = readers.into_iter().flat_map(|r| {
-            debug!("Spawning acceptor for uds connection from suricata");
-            if let crate::config::Listener::Uds(l) = r.listener {
-                let message = r.message;
-                let path = l.path;
-                match smol::Async::new(l.listener).map_err(Error::from) {
-                    Err(e) => Some(Err(e)),
-                    Ok(listener) => {
-                        let f = smol::Task::spawn(async move {
-                            listener.accept().await.map_err(Error::from).map(|t| {
-                                let (uds_connection, uds_addr) = t;
+        let future_connections: Result<Vec<_>, Error> = readers
+            .into_iter()
+            .flat_map(|r| {
+                debug!("Spawning acceptor for uds connection from suricata");
+                if let crate::config::Listener::Uds(l) = r.listener {
+                    let message = r.message;
+                    let path = l.path;
+                    match smol::Async::new(l.listener).map_err(Error::from) {
+                        Err(e) => Some(Err(e)),
+                        Ok(listener) => {
+                            let f = smol::Task::spawn(async move {
+                                listener.accept().await.map_err(Error::from).map(|t| {
+                                    let (uds_connection, uds_addr) = t;
 
-                                debug!("UDS connection formed from {:?}", uds_addr);
+                                    debug!("UDS connection formed from {:?}", uds_addr);
 
-                                EveReader::new(path, message, uds_connection)
-                            })
-                        });
-                        Some(Ok(f))
+                                    EveReader::new(path, message, uds_connection)
+                                })
+                            });
+                            Some(Ok(f))
+                        }
                     }
+                } else {
+                    None
                 }
-            } else {
-                None
-            }
-        }).collect();
+            })
+            .collect();
         let future_connections = future_connections?;
 
         let ipc = format!("--ipc={}", server_name);
@@ -249,9 +253,7 @@ impl<'a, M> Ids<'a, M> {
 
         Ok(Ids {
             readers: readers?,
-            process: Some(IdsProcess {
-                inner: process,
-            }),
+            process: Some(IdsProcess { inner: process }),
             ipc_server: connected_ipc,
         })
     }

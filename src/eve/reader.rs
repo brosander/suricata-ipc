@@ -1,13 +1,13 @@
 use crate::errors::Error;
 use crate::eve::json;
 
+use crate::config::ReaderMessageType;
 use futures::{AsyncRead, Stream};
 use log::*;
 use pin_project::pin_project;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use crate::config::ReaderMessageType;
-use std::path::PathBuf;
 
 const BUFFER_SIZE: usize = 131_070;
 

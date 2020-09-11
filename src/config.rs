@@ -13,7 +13,7 @@ pub enum ReaderMessageType {
     Http,
     Smtp,
     Stats,
-    Tls
+    Tls,
 }
 
 pub struct UdsListener {
@@ -203,8 +203,7 @@ fn uds_to_reader(uds: &Uds, mt: ReaderMessageType) -> Result<Reader, Error> {
         if path.exists() {
             std::fs::remove_file(&path).map_err(Error::from)?;
         }
-        let listener = std::os::unix::net::UnixListener::bind(path.clone())
-            .map_err(Error::from)?;
+        let listener = std::os::unix::net::UnixListener::bind(path.clone()).map_err(Error::from)?;
         Listener::Uds(UdsListener {
             listener: listener,
             path: path.clone(),
@@ -243,23 +242,27 @@ impl Config {
             message_types.push(ReaderMessageType::Tls);
         }
 
-        let res: Result<Vec<_>, Error> = message_types.into_iter().map(|mt| {
-            if let EveConfiguration::Uds(uds) = &self.eve {
-                uds_to_reader(uds, mt)
-            } else {
-                Ok(Reader {
-                    eve: self.eve.clone(),
-                    message: mt,
-                    listener: Listener::Redis,
-                })
-            }
-        }).collect();
+        let res: Result<Vec<_>, Error> = message_types
+            .into_iter()
+            .map(|mt| {
+                if let EveConfiguration::Uds(uds) = &self.eve {
+                    uds_to_reader(uds, mt)
+                } else {
+                    Ok(Reader {
+                        eve: self.eve.clone(),
+                        message: mt,
+                        listener: Listener::Redis,
+                    })
+                }
+            })
+            .collect();
 
         res
     }
 
     pub fn materialize<'a, T>(&'a self, readers: T) -> Result<(), Error>
-        where T: Iterator<Item=&'a Reader> + 'a,
+    where
+        T: Iterator<Item = &'a Reader> + 'a,
     {
         let rules = self.rule_path.to_string_lossy().to_owned();
         let suricata_config_path = self.suriata_config_path.to_string_lossy().to_owned();
@@ -270,12 +273,12 @@ impl Config {
             "no"
         };
         let max_pending_packets = format!("{}", self.max_pending_packets);
-        let readers = readers.map(|r| {
-            ConfigReader {
+        let readers = readers
+            .map(|r| ConfigReader {
                 eve: r.eve.clone(),
                 message: r.message.clone(),
-            }
-        }).collect();
+            })
+            .collect();
         let template = ConfigTemplate {
             rules: &rules,
             readers: readers,
