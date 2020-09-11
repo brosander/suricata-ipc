@@ -163,7 +163,7 @@ async fn send_packets_from_file<'a, T>(
 async fn run_ids<'a, M, T: TestRunner>(runner: T) -> Result<TestResult<M>, Error>
 where
     T: TestRunner,
-    M: for<'de> serde::Deserialize<'de>,
+    M: Send + for<'de> serde::Deserialize<'de> + 'static,
 {
     let mut runner = runner;
 
@@ -196,7 +196,8 @@ where
         PathBuf::from(std::env::var("SURICATA_CONFIG_DIR").unwrap_or("/etc/suricata".to_owned()));
     let mut ids: Ids<M> = Ids::new(ids_args).await?;
 
-    let mut ids_messages = ids.take_messages().expect("No alerts");
+    let ids_messages = ids.take_readers();
+    let mut ids_messages = futures::stream::select_all(ids_messages.into_iter());
 
     let packets_sent = runner.run(&mut ids).await;
 
