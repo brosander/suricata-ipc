@@ -194,13 +194,30 @@ outputs:
             #packethdr: no
 {% if http %}
         - http:
+{% if http_config.extended %}
+            extended: yes     # enable this for extended logging information
+{% else %}
             #extended: yes     # enable this for extended logging information
+{% endif %}
             # custom allows additional HTTP fields to be included in eve-log.
             # the example below adds three additional fields when uncommented
+{% if http_config.custom.is_empty() %}
             #custom: [Accept-Encoding, Accept-Language, Authorization]
+{% else %}
+            custom: [{% for custom in http_config.custom %}{% if !loop.first %}, {% endif %}{{ custom }}{% endfor %}]
+{% endif %}
             # set this value to one and only one from {both, request, response}
             # to dump all HTTP headers for every HTTP request and/or response
+{% match http_config.dump_all_headers %}
+{% when DumpAllHeaders::Both %}
             dump-all-headers: both
+{% when DumpAllHeaders::Request %}
+            dump-all-headers: request
+{% when DumpAllHeaders::Response %}
+            dump-all-headers: response
+{% when DumpAllHeaders::None %}
+            # dump-all-headers: both
+{% endmatch %}
 {% endif %}
 {% if dns %}
         - dns:

@@ -32,6 +32,7 @@ struct ConfigTemplate<'a> {
     stats: &'a str,
     flows: bool,
     http: bool,
+    http_config: HttpConfig,
     dns: bool,
     tls: bool,
     smtp: bool,
@@ -89,6 +90,31 @@ impl Default for EveConfiguration {
     }
 }
 
+#[derive(Clone)]
+pub enum DumpAllHeaders {
+    Both,
+    Request,
+    Response,
+    None,
+}
+
+#[derive(Clone)]
+pub struct HttpConfig {
+    pub extended: bool,
+    pub custom: Vec<String>,
+    pub dump_all_headers: DumpAllHeaders,
+}
+
+impl Default for HttpConfig {
+    fn default() -> Self {
+        Self {
+            extended: false,
+            custom: vec![],
+            dump_all_headers: DumpAllHeaders::Both,
+        }
+    }
+}
+
 /// Configuration options for suricata
 pub struct Config {
     /// Whether statistics should be enabled (output) for suricata, defaults to true
@@ -97,6 +123,8 @@ pub struct Config {
     pub enable_flows: bool,
     /// Whether http should be enabled (output) for suricata, defaults to false
     pub enable_http: bool,
+    /// Additional http configuration options
+    pub http_config: HttpConfig,
     /// Whether dns should be enabled (output) for suricata, defaults to false
     pub enable_dns: bool,
     /// Whether smtp should be enabled (output) for suricata, defaults to false
@@ -129,6 +157,7 @@ impl Default for Config {
             enable_dns: false,
             enable_smtp: false,
             enable_http: false,
+            http_config: HttpConfig::default(),
             enable_tls: false,
             enable_community_id: true,
             materialize_config_to: PathBuf::from("/etc/suricata/suricata-rs.yaml"),
@@ -182,6 +211,7 @@ impl Config {
             stats: &stats,
             flows: self.enable_flows,
             http: self.enable_http,
+            http_config: self.http_config.clone(),
             dns: self.enable_dns,
             smtp: self.enable_smtp,
             tls: self.enable_tls,
